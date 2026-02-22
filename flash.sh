@@ -17,27 +17,40 @@ fi
 
 echo "Sending bootloader command to Framework keyboard ($VID:$PID)..."
 
-# Send HID command: byte 0 = 0x0B (VIA bootloader command ID),
+# Find the raw HID interface (interface 1) via sysfs
+HIDRAW=""
+for dev in /sys/class/hidraw/hidraw*/device/uevent; do
+    if grep -q "000032AC:00000012" "$dev" 2>/dev/null; then
+        devdir="$(dirname "$dev")"
+        phys=$(cat "$devdir/uevent" 2>/dev/null | grep HID_PHYS || true)
+        # Interface 1 has input1 in the phys path
+        if echo "$phys" | grep -q "input1"; then
+            HIDRAW="/dev/$(basename "$(dirname "$devdir")")"
+            break
+        fi
+    fi
+done
+
+if [ -z "$HIDRAW" ]; then
+    echo "ERROR: Framework keyboard raw HID interface not found"
+    exit 1
+fi
+
+echo "Using $HIDRAW"
+
+# Send HID command via raw hidraw write (no external dependencies needed):
+# byte 0 = 0x0B (VIA bootloader command ID),
 # byte 1 = 0xFE (factory bootloader sub-command)
-# Interface 1 is the raw HID / VIA interface
-nix-shell -p python3Packages.hidapi --run 'python3 -c "
-import hid, sys
-
-devs = [d for d in hid.enumerate() if d[\"vendor_id\"] == 0x32AC and d[\"product_id\"] == 0x0012 and d[\"interface_number\"] == 1]
-if not devs:
-    print(\"ERROR: Framework keyboard not found on USB\", file=sys.stderr)
-    sys.exit(1)
-
-h = hid.device()
-h.open_path(devs[0][\"path\"])
-# 32-byte report: command 0x0B, sub-command 0xFE
-data = [0x00] * 32
+python3 -c "
+import os, sys
+data = bytearray(32)
 data[0] = 0x0B
 data[1] = 0xFE
-h.write(data)
-h.close()
-print(\"Bootloader command sent.\")
-"'
+fd = os.open('$HIDRAW', os.O_RDWR)
+os.write(fd, bytes(data))
+os.close(fd)
+print('Bootloader command sent.')
+"
 
 echo "Waiting for RP2040 mass storage device..."
 MOUNT_PATH=""
