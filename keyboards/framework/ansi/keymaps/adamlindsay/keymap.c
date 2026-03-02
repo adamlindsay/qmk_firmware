@@ -91,20 +91,24 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 // These render on top of whatever RGB animation is active.
 // LED indices derived from matrix mapping in ansi.c / ansi.h.
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+    uint8_t val = rgb_matrix_get_val();
+#define SCALE(x) ((uint8_t)((uint16_t)(x) * val / 255))
+
     // Volume keys (Mute, Vol Down, Vol Up) - cyan
-    RGB_MATRIX_INDICATOR_SET_COLOR(21, 0, 180, 255);
-    RGB_MATRIX_INDICATOR_SET_COLOR(19, 0, 180, 255);
-    RGB_MATRIX_INDICATOR_SET_COLOR(18, 0, 180, 255);
+    RGB_MATRIX_INDICATOR_SET_COLOR(21, 0, SCALE(180), SCALE(255));
+    RGB_MATRIX_INDICATOR_SET_COLOR(19, 0, SCALE(180), SCALE(255));
+    RGB_MATRIX_INDICATOR_SET_COLOR(18, 0, SCALE(180), SCALE(255));
 
     // Media keys (Prev, Play, Next) - green
-    RGB_MATRIX_INDICATOR_SET_COLOR(20, 0, 255, 100);
-    RGB_MATRIX_INDICATOR_SET_COLOR(22, 0, 255, 100);
-    RGB_MATRIX_INDICATOR_SET_COLOR(24, 0, 255, 100);
+    RGB_MATRIX_INDICATOR_SET_COLOR(20, 0, SCALE(255), SCALE(100));
+    RGB_MATRIX_INDICATOR_SET_COLOR(22, 0, SCALE(255), SCALE(100));
+    RGB_MATRIX_INDICATOR_SET_COLOR(24, 0, SCALE(255), SCALE(100));
 
     // Brightness keys (Brightness Down, Brightness Up) - amber
-    RGB_MATRIX_INDICATOR_SET_COLOR(26, 255, 180, 0);
-    RGB_MATRIX_INDICATOR_SET_COLOR(67, 255, 180, 0);
+    RGB_MATRIX_INDICATOR_SET_COLOR(26, SCALE(255), SCALE(180), 0);
+    RGB_MATRIX_INDICATOR_SET_COLOR(67, SCALE(255), SCALE(180), 0);
 
+#undef SCALE
     return false;
 }
 

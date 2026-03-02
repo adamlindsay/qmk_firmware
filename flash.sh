@@ -55,8 +55,8 @@ print('Bootloader command sent.')
 echo "Waiting for RP2040 mass storage device..."
 MOUNT_PATH=""
 for i in $(seq 1 $MOUNT_TIMEOUT); do
-    # RP2040 bootloader mounts as RPI-RP2
-    MOUNT_PATH=$(lsblk -o MOUNTPOINT,LABEL -nr 2>/dev/null | grep -i "RPI-RP2" | awk '{print $1}' || true)
+    # RP2040 bootloader mounts as RPI-RP2; use findmnt to only match when actually mounted
+    MOUNT_PATH=$(findmnt -rno TARGET -S LABEL=RPI-RP2 2>/dev/null || true)
     if [ -n "$MOUNT_PATH" ]; then
         break
     fi
