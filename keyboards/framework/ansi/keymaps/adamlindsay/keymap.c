@@ -3,7 +3,6 @@
 
 #include QMK_KEYBOARD_H
 #include "framework.h"
-#include "features/achordion.h"
 
 enum _layers {
   _BASE,
@@ -36,9 +35,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_ESC,  KC_MUTE, KC_VOLD, KC_VOLU, KC_MPRV, KC_MPLY, KC_MNXT, KC_BRID, KC_BRIU, KC_SCRN, KC_AIRP, KC_PSCR, KC_MSEL, KC_DEL,
         KC_GRV,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC,
         KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS,
-        // Home-row mods (GACS). Tap = letter, hold = mod. Achordion gates same-hand rolls.
-        // L uses LALT (not RALT) to avoid AltGr on Linux.
-        KC_CAPS, LGUI_T(KC_A), LALT_T(KC_S), LCTL_T(KC_D), LSFT_T(KC_F), KC_G, KC_H, RSFT_T(KC_J), RCTL_T(KC_K), LALT_T(KC_L), RGUI_T(KC_SCLN), KC_QUOT, KC_ENT,
+        KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,          KC_ENT,
         KC_LSFT,          KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH,          KC_RSFT,
         MO(_FN), KC_LCTL, KC_LALT, KC_LGUI,          KC_SPC,                    KC_RALT, KC_RCTL, KC_LEFT,   KC_UP, KC_DOWN, KC_RGHT
     ),
@@ -115,42 +112,8 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     return false;
 }
 
-// Bilateral combinations for home-row mods: a mod-tap only settles as a hold when
-// the other key is on the opposite physical hand. The electrical matrix is scrambled
-// (8x16, not left-to-right), so derive handedness from each key's physical X position
-// in g_led_config. The hand boundary is the gap between the index-finger home keys
-// G (x=94, left) and H (x=110, right) -> split at 102. (The board's geometric center
-// 112 is NOT the split: the right side extends further with the arrow/nav cluster.)
-#define HAND_SPLIT_X 102
-bool achordion_chord(uint16_t tap_hold_keycode, keyrecord_t *tap_hold_record,
-                     uint16_t other_keycode, keyrecord_t *other_record) {
-    uint8_t a = g_led_config.matrix_co[tap_hold_record->event.key.row][tap_hold_record->event.key.col];
-    uint8_t b = g_led_config.matrix_co[other_record->event.key.row][other_record->event.key.col];
-    // Unknown position (no LED) -> treat as same hand, keeping the mod as a tap.
-    if (a == NO_LED || b == NO_LED) {
-        return false;
-    }
-    return (g_led_config.point[a].x < HAND_SPLIT_X) != (g_led_config.point[b].x < HAND_SPLIT_X);
-}
-
-// Disable eager mods. By default Achordion applies Shift/Ctrl immediately on press
-// (before settling) via a non-standard process_action path; on overlapping/rapid
-// home-row rolls this can leave a modifier stuck on (observed: J locking Shift).
-// Returning false makes Achordion apply every mod only after it settles as a hold,
-// through QMK's normal, well-tested mod-tap pipeline.
-bool achordion_eager_mod(uint8_t mod) {
-    return false;
-}
-
-void matrix_scan_user(void) {
-    achordion_task();
-}
-
 // Make sure to keep FN Lock even after reset
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    if (!process_achordion(keycode, record)) {
-        return false;
-    }
     switch (keycode) {
         case FN_LOCK:
             if (record->event.pressed) {
